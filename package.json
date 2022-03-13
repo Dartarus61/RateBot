@@ -1,0 +1,29 @@
+{
+  "name": "tg-bot",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "prod": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FrogyFrog24/tg-bot.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/FrogyFrog24/tg-bot/issues"
+  },
+  "homepage": "https://github.com/FrogyFrog24/tg-bot#readme",
+  "devDependencies": {
+    "nodemon": "^2.0.15"
+  },
+  "dependencies": {
+    "axios": "^0.26.1",
+    "dotenv": "^16.0.0",
+    "node-telegram-bot-api": "^0.56.0"
+  }
+}
