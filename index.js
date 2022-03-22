@@ -9,14 +9,16 @@ import axios from "axios";
 
 dotenv.config();
 
-// const chatId = process.env.CHANNEL_ID;
+// const chatId = process.env.CHANNEL_ID; // Uncomment for dev mode
+const chatId = process.env.PROD_CHANNEL_ID; // Uncomment for dev mode
 const token = process.env.BOT_TOKEN;// Reading token from .env
+const serviceFee = process.env.SERVICE_FEE;
 const interval_time = 30000;// Reading interval in ms
+const floatRound = 3;
 let time_past = 0;// Start interval time
 let msg_to_change_id;// Id which read from created message after /read command 
-let msg_to_change_text;// Contain pinned message text to check before updating
 let interval_id;// setInterval id for killing it on /stop command
-let chatId;
+// let chatId;  // Uncomment for prod mode
 
 const bot = new TelegramBot(token, { polling: true });// Setup bot
 
@@ -24,30 +26,41 @@ const bot = new TelegramBot(token, { polling: true });// Setup bot
 
 // Get rate from garantex production server and return string with values
 async function _Rate_Values() {
-	let sellUSDt_USD;
-	let buyUSDt_USD;
-	let sellUSDt_RUB;
-	let buyUSDt_RUB;
+	let sellUSDt_USD = 0;
+	let buyUSDt_USD = 0;
+	let sellUSDt_RUB = 0;
+	let buyUSDt_RUB = 0;
 	try {
 		await axios.get("https://garantex.io/api/v2/depth?market=usdtusd")
-			.then((responseonse) => {
-				buyUSDt_USD = Object.values(responseonse.data.asks)[0].price;
-				sellUSDt_USD = Object.values(responseonse.data.bids)[0].price;
+			.then((response) => {
+				Object.values(response.data.asks).map((el, i) => {
+					if (i < 5) sellUSDt_USD += +el.price;
+				});
+				Object.values(response.data.bids).map((el, i) => {
+					if (i < 5) buyUSDt_USD += +el.price;
+				});
+				sellUSDt_USD = ((sellUSDt_USD / 5) * 1.025).toFixed(floatRound);
+				buyUSDt_USD = ((buyUSDt_USD / 5) * 0.975).toFixed(floatRound);
 			});
 		await axios.get("https://garantex.io/api/v2/depth?market=usdtrub")
-			.then((responseonse) => {
-				buyUSDt_RUB = Object.values(responseonse.data.asks)[0].price;
-				sellUSDt_RUB = Object.values(responseonse.data.bids)[0].price;
+			.then((response) => {
+				Object.values(response.data.asks).map((el, i) => {
+					if (i < 5) sellUSDt_RUB += +el.price;
+				});
+				Object.values(response.data.bids).map((el, i) => {
+					if (i < 5) buyUSDt_RUB += +el.price;
+				});
+				sellUSDt_RUB = ((sellUSDt_RUB / 5.0) * 1.025).toFixed(floatRound);
+				buyUSDt_RUB = ((buyUSDt_RUB / 5.0) * 0.975).toFixed(floatRound);
 			});
 	} catch (err) {
-		console.log(err.code);
-		console.log(err.response.body);
+		console.log(err);
 	}
 	return `
 	<b><u>USDt/USD</u></b>
-	Покупка: <i><b>${buyUSDt_USD}</b></i> Продажа: <i><b>${sellUSDt_USD}</b></i>\n
+	Покупка: <b>${buyUSDt_USD}$</b> Продажа: <b>${sellUSDt_USD}$</b>\n
 	<b><u>USDt/RUB</u></b>
-	Покупка: <i><b>${buyUSDt_RUB}</b></i> Продажа: <i><b>${sellUSDt_RUB}</b></i>
+	Покупка: <b>${buyUSDt_RUB}₽</b> Продажа: <b>${sellUSDt_RUB}₽</b>
 	`;
 }
 
