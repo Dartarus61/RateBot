@@ -9,14 +9,15 @@ import axios from "axios";
 
 dotenv.config();
 
-// const chatId = process.env.CHANNEL_ID;
-const token = process.env.BOT_TOKEN;// Reading token from .env
+const chatId = process.env.CHANNEL_ID; // Uncomment for dev mode
+// const chatId = process.env.PROD_CHANNEL_ID; // Uncomment for dev mode
+const token = process.env.DEV_BOT_TOKEN;// Reading token from .env
+const serviceFee = process.env.SERVICE_FEE;
 const interval_time = 30000;// Reading interval in ms
+const floatRound = 3;
 let time_past = 0;// Start interval time
 let msg_to_change_id;// Id which read from created message after /read command 
-let msg_to_change_text;// Contain pinned message text to check before updating
 let interval_id;// setInterval id for killing it on /stop command
-let chatId;
 
 const bot = new TelegramBot(token, { polling: true });// Setup bot
 
@@ -24,31 +25,39 @@ const bot = new TelegramBot(token, { polling: true });// Setup bot
 
 // Get rate from garantex production server and return string with values
 async function _Rate_Values() {
-	let sellUSDt_USD;
-	let buyUSDt_USD;
-	let sellUSDt_RUB;
-	let buyUSDt_RUB;
+	let sellUSDt_USD = 0;
+	let buyUSDt_USD = 0;
+	let sellUSDt_RUB = 0;
+	let buyUSDt_RUB = 0;
 	try {
 		await axios.get("https://garantex.io/api/v2/depth?market=usdtusd")
-			.then((responseonse) => {
-				buyUSDt_USD = Object.values(responseonse.data.asks)[0].price;
-				sellUSDt_USD = Object.values(responseonse.data.bids)[0].price;
+			.then((response) => {
+				Object.values(response.data.asks).map((el, i) => {
+					if (i < 5) sellUSDt_USD += +el.price;
+				});
+				Object.values(response.data.bids).map((el, i) => {
+					if (i < 5) buyUSDt_USD += +el.price;
+				});
+				sellUSDt_USD = ((sellUSDt_USD / 5) * 1.025).toFixed(floatRound);
+				buyUSDt_USD = ((buyUSDt_USD / 5) * 0.975).toFixed(floatRound);
 			});
 		await axios.get("https://garantex.io/api/v2/depth?market=usdtrub")
-			.then((responseonse) => {
-				buyUSDt_RUB = Object.values(responseonse.data.asks)[0].price;
-				sellUSDt_RUB = Object.values(responseonse.data.bids)[0].price;
+			.then((response) => {
+				Object.values(response.data.asks).map((el, i) => {
+					if (i < 5) sellUSDt_RUB += +el.price;
+				});
+				Object.values(response.data.bids).map((el, i) => {
+					if (i < 5) buyUSDt_RUB += +el.price;
+				});
+				sellUSDt_RUB = ((sellUSDt_RUB / 5.0) * 1.025).toFixed(floatRound);
+				buyUSDt_RUB = ((buyUSDt_RUB / 5.0) * 0.975).toFixed(floatRound);
 			});
 	} catch (err) {
-		console.log(err.code);
-		console.log(err.response.body);
+		console.log(err);
 	}
 	return `
-	<b><u>USDt/USD</u></b>
-	Покупка: <i><b>${buyUSDt_USD}</b></i> Продажа: <i><b>${sellUSDt_USD}</b></i>\n
-	<b><u>USDt/RUB</u></b>
-	Покупка: <i><b>${buyUSDt_RUB}</b></i> Продажа: <i><b>${sellUSDt_RUB}</b></i>
-	`;
+    Актуальный курс\n(обновляется каждые 30 секунд)\n\n<b><u>USDt/RUB</u></b>\n\nПокупка: <b>${buyUSDt_RUB}₽</b>\nПродажа: <b>${sellUSDt_RUB}₽</b>\n\n<b><u>USDt/USD</u></b>\n\nПокупка: <b>${buyUSDt_USD}$</b>\nПродажа: <b>${sellUSDt_USD}$</b>\n\nПо курсам Bitcoin, Ethereum, доллар США - пишите админу этого канала на @ob_men
+    `;
 }
 
 async function createRateMessage(chatId) {
@@ -92,11 +101,35 @@ function dateinterval() {
 
 //BOT COMMAND DESCRIPTION
 
-//Send welcome message on start
+//Activate menu panel
 bot.onText(/\/start/, async (msg) => {
-	clearInterval(interval_id);
-	openCommandMenu(msg.chat.id);
+	if (checkUserAcces(msg.from.id)) { //Check if user has acces to control panel
+		openCommandMenu(msg.chat.id);
+	} else {
+		bot.sendMessage(msg.from.id, 'У вас нет доступа к панели управления!');
+	}
 });
+
+function checkUserAcces(userID) {
+	let userHasAcces = false;
+	let administratorsID = []; //List of admin's ids
+
+	bot.getChatAdministrators(chatId)
+		.then(response =>
+			response.forEach((el, i) => {
+				administratorsID[i] = (el.status === 'administrator') || (el.status === 'creator') ? el.user.id : null;
+			})
+		)
+		.then(() => {
+			administratorsID.forEach(el => {
+				if (userID === el) {
+					userHasAcces = true;
+				}
+			})
+		});
+
+	return userHasAcces;
+}
 
 function openCommandMenu(id) {
 	bot.sendMessage(id, 'Бот активен, выберите действие', {
@@ -117,11 +150,10 @@ function openCommandMenu(id) {
 						text: "Прервать получение",
 						callback_data: "/stop",
 					}
-					,
-					{
+					/*{
 						text: "Задать id канала",
 						callback_data: "/set",
-					},
+					}*/,
 					{
 						text: "Как пользоваться?",
 						callback_data: "/help",
@@ -185,7 +217,7 @@ async function stopReceivingData(bot_chat_id) {
 }
 
 //Set id from chat input
-function setChannelID(bot_chat_id) {
+/*function setChannelID(bot_chat_id) {
 	bot.sendMessage(bot_chat_id, 'Введите id канала (получить его можно <a href="https://bot-t.ru/link/FIND_MY_ID_BOT">здесь</a>)',
 		{
 			parse_mode: 'HTML'
@@ -198,15 +230,16 @@ function setChannelID(bot_chat_id) {
 			bot.sendMessage(bot_chat_id, 'Канал привязан!');
 			bot.removeTextListener(regexp);
 		})
-}
+}*/
 
 function showInstruction(bot_chat_id) {
 	bot.sendMessage(bot_chat_id,
 		`	
 			ИНСТРУКЦИЯ ПО НАСТРОЙКЕ БОТА:
-			Для начала работы необходимо создать канал, куда вы хотите публиковать сообщение и получить его индентификатор. 
+			/*Для начала работы необходимо создать канал, куда вы хотите публиковать сообщение и получить его индентификатор. 
 			Нажмите "Задать id канала", для дополнительной информации.
-			Нажмите "Задать id канала" еще раз и введите полученный ID. После сообщения "Канал привязан!" вам необходимо добавить бота в канал в качестве администратора, рекомендуется использовать настройки доступа по умолчанию.
+			Нажмите "Задать id канала" еще раз и введите полученный ID. После сообщения "Канал привязан!" */
+            Вам необходимо добавить бота в канал в качестве администратора, рекомендуется использовать настройки доступа по умолчанию.
 			После добавления бота в канал нажмите "Запросить данные" для публикации сообщения с курсом валют USDt/USD и USDt/RUB.
 			Сообщение будет обновляться каждые 30 секунд и пересоздаваться каждые 48 часов.
 			Для принудительного обновления курса нажмите "Обновить курс".
@@ -236,3 +269,10 @@ bot.on('callback_query', function onCallbackQuery(callbackQuery) {
 			break;
 	}
 });
+
+//Add timestamp to log
+console.logCopy = console.log.bind(console);
+console.log = function (data) {
+	var currentDate = '[' + new Date().toLocaleString("en-US", { timeZone: "Europe/Moscow" }) + '] ';
+	this.logCopy(currentDate, data);
+};

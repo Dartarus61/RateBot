@@ -10,14 +10,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/FrogyFrog24/tg-bot.git"
+    "url": "git+https://github.com/Dartarus61/RateBot.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/FrogyFrog24/tg-bot/issues"
+    "url": "https://github.com/Dartarus61/RateBot/issues"
   },
-  "homepage": "https://github.com/FrogyFrog24/tg-bot#readme",
+  "homepage": "https://github.com/Dartarus61/RateBot#readme",
   "devDependencies": {
     "nodemon": "^2.0.15"
   },
