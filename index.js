@@ -12,7 +12,6 @@ dotenv.config();
 const chatId = process.env.CHANNEL_ID; // Uncomment for dev mode
 // const chatId = process.env.PROD_CHANNEL_ID; // Uncomment for dev mode
 const token = process.env.DEV_BOT_TOKEN;// Reading token from .env
-const serviceFee = process.env.SERVICE_FEE;
 const interval_time = 30000;// Reading interval in ms
 const floatRound = 3;
 let time_past = 0;// Start interval time
@@ -103,11 +102,11 @@ function dateinterval() {
 
 //Activate menu panel
 bot.onText(/\/start/, async (msg) => {
-	if (checkUserAcces(msg.from.id)) { //Check if user has acces to control panel
-		openCommandMenu(msg.chat.id);
-	} else {
-		bot.sendMessage(msg.from.id, 'У вас нет доступа к панели управления!');
-	}
+		if (checkUserAcces(msg.from.id) || (msg.from.id === (process.env.DEVELOPER_USER))) { //Check if user has acces to control panel
+			openCommandMenu(msg.chat.id);
+		} else {
+			bot.sendMessage(msg.from.id, 'У вас нет доступа к панели управления!');
+		}
 });
 
 function checkUserAcces(userID) {
