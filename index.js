@@ -2,14 +2,14 @@
 // npm install axios
 // npm install node-telegram-bot-api
 // npm run dev //for development mode
-// npm run prod //for production mode
+// npm run prod //for production modegit config --global user.name "John Doe"
 import dotenv from "dotenv";
 import TelegramBot from "node-telegram-bot-api";
 import axios from "axios";
 
 dotenv.config();
 
-const chatId = process.env.CHANNEL_ID; // Uncomment for dev mode
+const chatId = process.env.DEV_CHANNEL_ID; // Uncomment for dev mode
 // const chatId = process.env.PROD_CHANNEL_ID; // Uncomment for dev mode
 const token = process.env.DEV_BOT_TOKEN;// Reading token from .env
 const interval_time = 30000;// Reading interval in ms
