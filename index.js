@@ -25,19 +25,19 @@ async function _Rate_Values() {
 	let buyUSDt_USD = 0;
 	let sellUSDt_RUB = 0;
 	let buyUSDt_RUB = 0;
-	let temp;
 	try {
 		await axios.get("https://garantex.io/api/v2/depth?market=usdtusd")
 			.then((response) => {
 				Object.values(response.data.asks).map((el, i) => {
 					if (i < 5) sellUSDt_USD += +el.price;
+					
 				});
 				Object.values(response.data.bids).map((el, i) => {
 					if (i < 5) buyUSDt_USD += +el.price;
+					
 				});
-				temp = [(sellUSDt_USD / 5), (buyUSDt_USD / 5)]
-				sellUSDt_USD = ((temp[0] - ((1.0 / temp[0]) * serviceFee)) * 1.02).toFixed(floatRound);
-				buyUSDt_USD = (temp[1] - ((1.0 / temp[1]) * serviceFee)).toFixed(floatRound);
+				sellUSDt_USD = (((sellUSDt_USD / 5) - ((1.0 / (sellUSDt_USD / 5)) * serviceFee)) * 1.02).toFixed(floatRound);
+				buyUSDt_USD = ((buyUSDt_USD / 5) - ((1.0 / (buyUSDt_USD / 5)) * serviceFee)).toFixed(floatRound);
 			});
 		await axios.get("https://garantex.io/api/v2/depth?market=usdtrub")
 			.then((response) => {
@@ -47,9 +47,8 @@ async function _Rate_Values() {
 				Object.values(response.data.bids).map((el, i) => {
 					if (i < 5) buyUSDt_RUB += (+el.price);
 				});
-				temp = [(sellUSDt_RUB / 5), (buyUSDt_RUB / 5)]
-				sellUSDt_RUB = ((temp[0] - ((1.0 / temp[0]) * serviceFee)) * 1.02).toFixed(floatRound);
-				buyUSDt_RUB = (temp[1] - ((1.0 / temp[1]) * serviceFee)).toFixed(floatRound);
+				sellUSDt_RUB = (((sellUSDt_RUB / 5) - ((10 / (sellUSDt_RUB / 5)) * serviceFee)) * 1.02).toFixed(floatRound);
+				buyUSDt_RUB = ((buyUSDt_RUB / 5) - ((10 / (buyUSDt_RUB / 5)) * serviceFee)).toFixed(floatRound);
 			});
 	} catch (err) {
 		console.log(err);
@@ -95,7 +94,7 @@ async function updateRateMessage() {
 // Update pinned message in 48h after creating and re-create it when this time left
 function dateinterval() {
 	interval_id = setInterval(async () => {
-		if (time_past < 40000) {
+		if (time_past < 169200000) {
 			time_past += interval_time;
 			await updateRateMessage(chatId);
 		} else {
