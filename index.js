@@ -9,6 +9,7 @@ dotenv.config();
 const chatId = process.env.DEV_CHANNEL_ID; // Use for dev mode
 const token = process.env.DEV_BOT_TOKEN;// Use for dev mode
 const interval_time = 30000;// Reading interval in ms
+const serviceFee = 0.002;
 const floatRound = 3;
 let time_past = 0;// Start interval time
 let msg_to_change_id;// Id which is reading from created message
@@ -35,20 +36,20 @@ async function _Rate_Values() {
 					if (i < 5) buyUSDt_USD += +el.price;
 				});
 				temp = [(sellUSDt_USD / 5), (buyUSDt_USD / 5)]
-				sellUSDt_USD = ((temp[0] - ((1.0 / temp[0])*0.002))*1.02).toFixed(floatRound);
-				buyUSDt_USD = (temp[1] - ((1.0 / temp[1])*0.002)).toFixed(floatRound);
+				sellUSDt_USD = ((temp[0] - ((1.0 / temp[0]) * serviceFee)) * 1.02).toFixed(floatRound);
+				buyUSDt_USD = (temp[1] - ((1.0 / temp[1]) * serviceFee)).toFixed(floatRound);
 			});
 		await axios.get("https://garantex.io/api/v2/depth?market=usdtrub")
 			.then((response) => {
 				Object.values(response.data.asks).map((el, i) => {
-					if (i < 5) sellUSDt_RUB += +el.price;
+					if (i < 5) sellUSDt_RUB += (+el.price);
 				});
 				Object.values(response.data.bids).map((el, i) => {
-					if (i < 5) buyUSDt_RUB += +el.price;
+					if (i < 5) buyUSDt_RUB += (+el.price);
 				});
 				temp = [(sellUSDt_RUB / 5), (buyUSDt_RUB / 5)]
-				sellUSDt_RUB = ((temp[0] - ((1.0 / temp[0])*0.002))*1.02).toFixed(floatRound);
-				buyUSDt_RUB = (temp[1] - ((1.0 / temp[1])*0.002)).toFixed(floatRound);
+				sellUSDt_RUB = ((temp[0] - ((1.0 / temp[0]) * serviceFee)) * 1.02).toFixed(floatRound);
+				buyUSDt_RUB = (temp[1] - ((1.0 / temp[1]) * serviceFee)).toFixed(floatRound);
 			});
 	} catch (err) {
 		console.log(err);
@@ -59,12 +60,19 @@ async function _Rate_Values() {
 }
 
 async function createRateMessage(chatId) {
+	if (msg_to_change_id) {
+		bot.deleteMessage(chatId, msg_to_change_id);
+	}
 	bot.sendMessage(chatId, await _Rate_Values(), {
 		parse_mode: "HTML",
 	})
 		.then((response) => {
 			msg_to_change_id = response.message_id;
-			bot.pinChatMessage(response.chat.id, msg_to_change_id);
+			bot.pinChatMessage(response.chat.id, msg_to_change_id).then(() => {
+				bot.deleteMessage(chatId, ++msg_to_change_id);
+				--msg_to_change_id;
+			}
+			);
 		});
 }
 
@@ -87,7 +95,7 @@ async function updateRateMessage() {
 // Update pinned message in 48h after creating and re-create it when this time left
 function dateinterval() {
 	interval_id = setInterval(async () => {
-		if (time_past < 172800000) {
+		if (time_past < 40000) {
 			time_past += interval_time;
 			await updateRateMessage(chatId);
 		} else {
@@ -101,11 +109,11 @@ function dateinterval() {
 
 //Activate menu panel
 bot.onText(/\/start/, async (msg) => {
-		if (checkUserAcces(msg.from.id) || (msg.from.id === (+process.env.DEVELOPER))) { //Check if user has acces to control panel
-			openCommandMenu(msg.chat.id);
-		} else {
-			bot.sendMessage(msg.from.id, 'У вас нет доступа к панели управления!');
-		}
+	if (checkUserAcces(msg.from.id) || (msg.from.id === (+process.env.DEVELOPER))) { //Check if user has acces to control panel
+		openCommandMenu(msg.chat.id);
+	} else {
+		bot.sendMessage(msg.from.id, 'У вас нет доступа к панели управления!');
+	}
 });
 
 function checkUserAcces(userID) {
@@ -239,7 +247,7 @@ function showInstruction(bot_chat_id) {
 			Нажмите "Задать id канала" еще раз и введите полученный ID. После сообщения "Канал привязан!" */
             Вам необходимо добавить бота в канал в качестве администратора, рекомендуется использовать настройки доступа по умолчанию.
 			После добавления бота в канал нажмите "Запросить данные" для публикации сообщения с курсом валют USDt/USD и USDt/RUB.
-			Сообщение будет обновляться каждые 30 секунд и пересоздаваться каждые 48 часов.
+			Сообщение будет обновляться каждые 30 секунд и пересоздаваться каждые 47 часов.
 			Для принудительного обновления курса нажмите "Обновить курс".
 			Чтобы прервать получение данных нажмите "Прервать получение". Для возобновления работы нажмите "Запросить данные", после чего будет создано новое сообщение и помещено в закрепленные канала.
 			В случае неполадок, пишите @akimaWeb.
