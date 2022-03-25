@@ -5,7 +5,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "dev": "npm version patch && nodemon index.js",
+    "dev": "nodemon index.js",
     "prod": "node index.js"
   },
   "repository": {

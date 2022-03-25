@@ -1,21 +1,17 @@
-// npm install nodemon -D
-// npm install axios
-// npm install node-telegram-bot-api
-// npm run dev //for development mode
-// npm run prod //for production modegit config --global user.name "John Doe"
 import dotenv from "dotenv";
 import TelegramBot from "node-telegram-bot-api";
 import axios from "axios";
 
 dotenv.config();
 
-const chatId = process.env.DEV_CHANNEL_ID; // Uncomment for dev mode
-// const chatId = process.env.PROD_CHANNEL_ID; // Uncomment for dev mode
-const token = process.env.DEV_BOT_TOKEN;// Reading token from .env
+// const token = process.env.PROD_BOT_TOKEN;// Use for production mode
+// const chatId = process.env.PROD_CHANNEL_ID; // Use for production mode
+const chatId = process.env.DEV_CHANNEL_ID; // Use for dev mode
+const token = process.env.DEV_BOT_TOKEN;// Use for dev mode
 const interval_time = 30000;// Reading interval in ms
 const floatRound = 3;
 let time_past = 0;// Start interval time
-let msg_to_change_id;// Id which read from created message after /read command 
+let msg_to_change_id;// Id which is reading from created message
 let interval_id;// setInterval id for killing it on /stop command
 
 const bot = new TelegramBot(token, { polling: true });// Setup bot
@@ -28,6 +24,7 @@ async function _Rate_Values() {
 	let buyUSDt_USD = 0;
 	let sellUSDt_RUB = 0;
 	let buyUSDt_RUB = 0;
+	let temp;
 	try {
 		await axios.get("https://garantex.io/api/v2/depth?market=usdtusd")
 			.then((response) => {
@@ -37,8 +34,9 @@ async function _Rate_Values() {
 				Object.values(response.data.bids).map((el, i) => {
 					if (i < 5) buyUSDt_USD += +el.price;
 				});
-				sellUSDt_USD = ((sellUSDt_USD / 5) * 1.025).toFixed(floatRound);
-				buyUSDt_USD = ((buyUSDt_USD / 5) * 0.975).toFixed(floatRound);
+				temp = [(sellUSDt_USD / 5), (buyUSDt_USD / 5)]
+				sellUSDt_USD = ((temp[0] - ((1.0 / temp[0])*0.002))*1.02).toFixed(floatRound);
+				buyUSDt_USD = (temp[1] - ((1.0 / temp[1])*0.002)).toFixed(floatRound);
 			});
 		await axios.get("https://garantex.io/api/v2/depth?market=usdtrub")
 			.then((response) => {
@@ -48,8 +46,9 @@ async function _Rate_Values() {
 				Object.values(response.data.bids).map((el, i) => {
 					if (i < 5) buyUSDt_RUB += +el.price;
 				});
-				sellUSDt_RUB = ((sellUSDt_RUB / 5.0) * 1.025).toFixed(floatRound);
-				buyUSDt_RUB = ((buyUSDt_RUB / 5.0) * 0.975).toFixed(floatRound);
+				temp = [(sellUSDt_RUB / 5), (buyUSDt_RUB / 5)]
+				sellUSDt_RUB = ((temp[0] - ((1.0 / temp[0])*0.002))*1.02).toFixed(floatRound);
+				buyUSDt_RUB = (temp[1] - ((1.0 / temp[1])*0.002)).toFixed(floatRound);
 			});
 	} catch (err) {
 		console.log(err);
@@ -102,7 +101,7 @@ function dateinterval() {
 
 //Activate menu panel
 bot.onText(/\/start/, async (msg) => {
-		if (checkUserAcces(msg.from.id) || (msg.from.id === (process.env.DEVELOPER_USER))) { //Check if user has acces to control panel
+		if (checkUserAcces(msg.from.id) || (msg.from.id === (+process.env.DEVELOPER))) { //Check if user has acces to control panel
 			openCommandMenu(msg.chat.id);
 		} else {
 			bot.sendMessage(msg.from.id, 'У вас нет доступа к панели управления!');
@@ -201,11 +200,11 @@ async function updateData(bot_chat_id) {
 		});
 
 	} else {
-		bot.sendMessage(bot_chat_id, "Канал не привязан!");
+		bot.sendMessage(bot_chat_id, "Канал не привязан!"); 
 	}
 }
 
-//Kill reading interval
+//Stop reading interval
 async function stopReceivingData(bot_chat_id) {
 	if (chatId) {
 		clearInterval(interval_id);
@@ -260,12 +259,13 @@ bot.on('callback_query', function onCallbackQuery(callbackQuery) {
 		case '/stop':
 			stopReceivingData(callbackQuery.message.chat.id);
 			break;
-		case '/set':
-			setChannelID(callbackQuery.message.chat.id);
-			break;
+		// case '/set':
+		// 	setChannelID(callbackQuery.message.chat.id);
+		// 	break;
 		case '/help':
 			showInstruction(callbackQuery.message.chat.id);
 			break;
+
 	}
 });
 
